@@ -58,7 +58,7 @@ class ProductManager {
         
         // Valido que no exista otro producto con el mismo codigo
         if (products.some(p => p.code === productData.code)) {
-            throw new Error(`Ya existe un producto con el código ${productData.code}.`);
+            throw new Error(`Ya existe un producto con el codigo ${productData.code}.`);
         }
         
         const newProduct = {

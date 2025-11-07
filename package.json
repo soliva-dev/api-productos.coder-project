@@ -12,6 +12,8 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "express-handlebars": "^7.1.2",
+    "socket.io": "^4.7.5"
   }
 }
