@@ -1,4 +1,3 @@
-// Inicializo la con del socket del lado del cliente
 const socket = io();
 
 const productList = document.getElementById('products-list');
@@ -27,17 +26,14 @@ const renderProducts = (products) => {
     });
 };
 
-// Escuchamos el evento 'updateProducts' del servidor
 socket.on('updateProducts', (products) => {
     console.log('Lista de productos actualizada recibida:', products);
     renderProducts(products);
 });
 
-// Manejamos el envio del formulario de creacion
 createForm.addEventListener('submit', (e) => {
     e.preventDefault();
 
-    // Obtenemos los datos del formulario
     const formData = new FormData(createForm);
     const productData = {};
     formData.forEach((value, key) => {
@@ -51,14 +47,11 @@ createForm.addEventListener('submit', (e) => {
     createForm.reset();
 });
 
-// Usamos delegacion de eventos en la lista de productos
-productList.addEventListener('click', (e) => {
-    // Verificamos si el clic fue en un boton de eliminar
+productsList.addEventListener('click', async (e) => {
     if (e.target.classList.contains('delete-btn')) {
         const productId = e.target.getAttribute('data-id');
         console.log('Enviando ID para eliminar:', productId);
         
-        // Emitimos el evento 'deleteProduct' al servidor
         socket.emit('deleteProduct', productId);
     }
 });

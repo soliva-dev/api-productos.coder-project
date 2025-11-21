@@ -2,58 +2,112 @@ import { Router } from 'express';
 import ProductManager from '../managers/ProductManager.js';
 
 const router = Router();
-const productManager = new ProductManager('./src/data/products.json');
+const productManager = new ProductManager();
 
-// GET /api/products/
 router.get('/', async (req, res) => {
     try {
-        const products = await productManager.getProducts();
-        res.json(products);
+        const { limit, page, sort, query, category, availability } = req.query;
+        
+        let queryFilter = {};
+        if (category) {
+            queryFilter.category = category;
+        }
+        if (availability !== undefined) {
+            queryFilter.availability = availability;
+        }
+        if (query) {
+            try {
+                queryFilter = { ...queryFilter, ...JSON.parse(query) };
+            } catch {
+                queryFilter.category = query;
+            }
+        }
+
+        const options = {
+            limit: limit || 10,
+            page: page || 1,
+            sort: sort,
+            query: Object.keys(queryFilter).length > 0 ? queryFilter : undefined
+        };
+
+        const result = await productManager.getProducts(options);
+        res.json(result);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error en GET /api/products:', error);
+        res.status(500).json({ 
+            status: 'error', 
+            message: error.message 
+        });
     }
 });
 
-// GET /api/products/:pid
 router.get('/:pid', async (req, res) => {
     try {
         const productId = req.params.pid;
         const product = await productManager.getProductById(productId);
-        res.json(product);
+        res.json({
+            status: 'success',
+            payload: product
+        });
     } catch (error) {
-        res.status(404).json({ error: error.message });
+        console.error('Error en GET /api/products/:pid:', error);
+        const statusCode = error.message.includes('no encontrado') || error.message.includes('invalido') ? 404 : 500;
+        res.status(statusCode).json({ 
+            status: 'error',
+            message: error.message 
+        });
     }
 });
 
-// POST /api/products/
 router.post('/', async (req, res) => {
     try {
         const newProduct = await productManager.addProduct(req.body);
-        res.status(201).json(newProduct);
+        res.status(201).json({
+            status: 'success',
+            payload: newProduct
+        });
     } catch (error) {
-        res.status(400).json({ error: error.message });
+        console.error('Error en POST /api/products:', error);
+        res.status(400).json({ 
+            status: 'error',
+            message: error.message 
+        });
     }
 });
 
-// PUT /api/products/:pid
 router.put('/:pid', async (req, res) => {
     try {
         const productId = req.params.pid;
         const updatedProduct = await productManager.updateProduct(productId, req.body);
-        res.json(updatedProduct);
+        res.json({
+            status: 'success',
+            payload: updatedProduct
+        });
     } catch (error) {
-        res.status(404).json({ error: error.message });
+        console.error('Error en PUT /api/products:', error);
+        const statusCode = error.message.includes('no encontrado') || error.message.includes('invalido') ? 404 : 400;
+        res.status(statusCode).json({ 
+            status: 'error',
+            message: error.message 
+        });
     }
 });
 
-// DELETE /api/products/:pid
 router.delete('/:pid', async (req, res) => {
     try {
         const productId = req.params.pid;
         await productManager.deleteProduct(productId);
-        res.status(204).send();
+        res.json({
+            status: 'success',
+            message: 'Producto eliminado correctamente'
+        });
     } catch (error) {
-        res.status(404).json({ error: error.message });
+        console.error('Error en DELETE /api/products:', error);
+        const statusCode = error.message.includes('no encontrado') || error.message.includes('invalido') ? 404 : 500;
+        res.status(statusCode).json({ 
+            status: 'error',
+            message: error.message 
+        });
     }
 });
 

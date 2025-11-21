@@ -5,8 +5,8 @@
     }
     .products-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 1.2rem;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
         margin-top: 1rem;
     }
     .product-description {
@@ -21,6 +21,7 @@
         gap: 0.6rem;
         font-size: 0.9rem;
         color: #444;
+        margin-bottom: 1rem;
     }
     .product-content {
         padding: 15px 18px;
@@ -28,15 +29,104 @@
         line-height: 1.5;
         color: #444;
     }
+    .product-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+        font-size: 14px;
+        transition: background-color 0.3s;
+    }
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+    }
+    .btn-success:hover {
+        background-color: #1e7e34;
+    }
+    .pagination {
+        margin: 30px 0;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        align-items: center;
+    }
+    .page-link {
+        padding: 8px 12px;
+        border: 1px solid #dee2e6;
+        color: #007bff;
+        text-decoration: none;
+        border-radius: 4px;
+    }
+    .page-link:hover {
+        background-color: #e9ecef;
+    }
+    .page-link.disabled {
+        color: #6c757d;
+        pointer-events: none;
+        background-color: #fff;
+        border-color: #dee2e6;
+    }
+    .page-info {
+        margin: 0 15px;
+        color: #6c757d;
+    }
+    .filters {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex;
+        gap: 15px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    .filter-group label {
+        font-size: 12px;
+        color: #666;
+        font-weight: 500;
+    }
+    .filter-group select,
+    .filter-group input {
+        padding: 6px 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        font-size: 14px;
+    }
     body {
         font-family: "Segoe UI", Arial, sans-serif;
         background-color: #f4f6fa;
         color: #333;
         margin: 0;
-        padding: 40px;
+        padding: 20px;
         display: flex;
         flex-direction: column;
         align-items: center;
+    }
+    .container {
+        max-width: 1200px;
+        width: 100%;
     }
     h2 {
         color: #1f3a6f;
@@ -92,38 +182,193 @@
         color: #111;
     }
     .no-products {
-        grid-column: span 2;
         text-align: center;
         color: #777;
         font-style: italic;
         background: #fafafa;
         border: 1px dashed #ccc;
         border-radius: 8px;
-        padding: 20px;
+        padding: 40px 20px;
+        grid-column: 1 / -1;
+    }
+    .product-status {
+        font-size: 12px;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-weight: 500;
+    }
+    .status-active {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    .status-inactive {
+        background-color: #f8d7da;
+        color: #721c24;
     }
 </style>
 
-<h2>Productos listados (solo lectura)</h2>
-<p class="info-text">Esta lista se actualiza solo si recargas la pagina despues de un cambio en la API.</p>
+<div class="container">
+    <h2>Catalogo de Productos</h2>
 
-<div class="products-grid">
-    {{#each products}}
-        <li class="product-card" id="product-{{this.id}}">
-            <div class="product-content">
-                <div class="product-header"><h3 class="product-title">{{this.title}}</h3></div>
-                <hr>
-                <div class="product-id">ID: {{this.id}}</div>
-                <div class="product-info">
-                    <span><b>Descripcion:</b> {{this.description}}</span>
-                    <span><b>Precio:</b> ${{this.price}}</span>
-                    <span><b>Stock:</b> {{this.stock}}</span>
-                    <span><b>Codigo:</b> {{this.code}}</span>
-                    <span><b>Categoria:</b> {{this.category}}</span>
+    <!-- Filtros -->
+    <div class="filters">
+        <div class="filter-group">
+            <label>Productos por pagina:</label>
+            <select id="limitFilter" onchange="applyFilters()">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Ordenar por precio:</label>
+            <select id="sortFilter" onchange="applyFilters()">
+                <option value="">Sin ordenar</option>
+                <option value="asc">Menor a mayor</option>
+                <option value="desc">Mayor a menor</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Categoria:</label>
+            <input type="text" id="categoryFilter" placeholder="Filtrar por categoria" onchange="applyFilters()">
+        </div>
+    </div>
+
+    {{#if hasProducts}}
+        <div class="products-grid">
+            {{#each products}}
+                <div class="product-card" id="product-{{this._id}}">
+                    <div class="product-header">
+                        <h3 class="product-title">{{this.title}}</h3>
+                        <span class="product-status {{#if this.status}}status-active{{else}}status-inactive{{/if}}">
+                            {{#if this.status}}Activo{{else}}Inactivo{{/if}}
+                        </span>
+                    </div>
+                    <div class="product-content">
+                        <div class="product-id">ID: {{this._id}}</div>
+                        <p class="product-description">{{this.description}}</p>
+                        <div class="product-details">
+                            <span><strong>Precio:</strong> ${{this.price}}</span>
+                            <span><strong>Stock:</strong> {{this.stock}}</span>
+                            <span><strong>Codigo:</strong> {{this.code}}</span>
+                            <span><strong>Categoria:</strong> {{this.category}}</span>
+                        </div>
+                        <div class="product-actions">
+                            <a href="/products/{{this._id}}" class="btn btn-primary">Ver Detalle</a>
+                            <button onclick="addToCart('{{this._id}}')" class="btn btn-success">Agregar al Carrito</button>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </li>
+            {{/each}}
+        </div>
+
+        <!-- Paginacion -->
+        {{#if pagination}}
+        <div class="pagination">
+            {{#if pagination.hasPrevPage}}
+                <a href="{{pagination.prevLink}}" class="page-link">« Anterior</a>
+            {{else}}
+                <span class="page-link disabled">« Anterior</span>
+            {{/if}}
+
+            <span class="page-info">
+                Pagina {{pagination.page}} de {{pagination.totalPages}}
+                ({{pagination.payload.length}} productos)
+            </span>
+
+            {{#if pagination.hasNextPage}}
+                <a href="{{pagination.nextLink}}" class="page-link">Siguiente »</a>
+            {{else}}
+                <span class="page-link disabled">Siguiente »</span>
+            {{/if}}
+        </div>
+        {{/if}}
     {{else}}
-        <li class="no-products">No hay productos para mostrar.</li>
-    {{/each}}
+        <div class="no-products">
+            <h3>No hay productos disponibles</h3>
+            <p>No se encontraron productos que coincidan con los filtros aplicados.</p>
+        </div>
+    {{/if}}
 </div>
+
+<script>
+function applyFilters() {
+    const limit = document.getElementById('limitFilter').value;
+    const sort = document.getElementById('sortFilter').value;
+    const category = document.getElementById('categoryFilter').value;
+    
+    let url = `/products?limit=${limit}&page=1`;
+    if (sort) url += `&sort=${sort}`;
+    if (category) url += `&category=${encodeURIComponent(category)}`;
+    
+    window.location.href = url;
+}
+
+async function addToCart(productId) {
+    try {
+        // Para este ejemplo, creamos un carrito temporal
+        // En una aplicacion real, tendrias un carrito por usuario
+        let cartId = localStorage.getItem('cartId');
+        
+        if (!cartId) {
+            // Crear nuevo carrito
+            const createCartResponse = await fetch('/api/carts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            const cartData = await createCartResponse.json();
+            cartId = cartData.payload._id;
+            localStorage.setItem('cartId', cartId);
+        }
+
+        // Agregar producto al carrito
+        const response = await fetch(`/api/carts/${cartId}/product/${productId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ quantity: 1 })
+        });
+
+        const result = await response.json();
+
+        if (result.status === 'success') {
+            alert('Producto agregado al carrito exitosamente');
+            // Opcional: mostrar enlace al carrito
+            showCartOption(cartId);
+        } else {
+            alert('Error: ' + result.message);
+        }
+    } catch (error) {
+        console.error('Error adding to cart:', error);
+        alert('Error al agregar el producto al carrito');
+    }
+}
+
+function showCartOption(cartId) {
+    // Mostrar enlace al carrito si no existe
+    if (!document.getElementById('cart-link')) {
+        const cartLink = document.createElement('div');
+        cartLink.id = 'cart-link';
+        cartLink.innerHTML = `
+            <div style="position: fixed; top: 20px; right: 20px; background: #007bff; color: white; padding: 10px 15px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                <a href="/carts/${cartId}" style="color: white; text-decoration: none;">
+                    Ver Carrito
+                </a>
+            </div>
+        `;
+        document.body.appendChild(cartLink);
+    }
+}
+
+// Verificar si ya hay un carrito en localStorage al cargar
+window.onload = function() {
+    const cartId = localStorage.getItem('cartId');
+    if (cartId) {
+        showCartOption(cartId);
+    }
+};
+</script>
 

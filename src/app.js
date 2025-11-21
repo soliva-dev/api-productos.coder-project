@@ -5,6 +5,7 @@ import { engine } from 'express-handlebars';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import { connectDB } from './config/database.js';
 import productsRouter from './routes/products.router.js';
 import cartsRouter from './routes/carts.router.js';
 import viewsRouter from './routes/views.router.js'; 
@@ -17,9 +18,21 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server);
 const PORT = 8080;
-const productManager = new ProductManager(path.join(__dirname, './data/products.json'));
+const productManager = new ProductManager();
 
-app.engine('handlebars', engine());
+// Conectar a MongoDB
+connectDB();
+
+app.engine('handlebars', engine({
+    helpers: {
+        multiply: function(a, b) {
+            return (a * b).toFixed(2);
+        },
+        formatDate: function(date) {
+            return new Date(date).toLocaleDateString('es-ES');
+        }
+    }
+}));
 app.set('view engine', 'handlebars');
 app.set('views', path.join(__dirname, 'views'));
 
@@ -32,12 +45,30 @@ app.use('/api/products', productsRouter);
 app.use('/api/carts', cartsRouter);
 app.use('/', viewsRouter);
 
+app.use((err, req, res, next) => {
+    console.error('Error no capturado:', err);
+    res.status(500).json({
+        status: 'error',
+        message: 'Error interno del servidor'
+    });
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('Excepcion no capturada:', error);
+    // No cerramos el proceso para evitar que se reinicie
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Promesa rechazada no manejada:', reason);
+    // No cerramos el proceso para evitar que se reinicie
+});
+
 io.on('connection', async (socket) => {
     console.log('Nuevo cliente conectado');
 
     // 1. Enviar la lista de productos al cliente que se acaba de conectar
     try {
-        const products = await productManager.getProducts();
+        const products = await productManager.getAllProducts();
         socket.emit('updateProducts', products);
     } catch (error) {
         console.error('Error al obtener productos para el nuevo cliente:', error);
@@ -61,7 +92,7 @@ io.on('connection', async (socket) => {
             await productManager.addProduct(newProduct);
             
             // 3. Obtener la lista actualizada y emitirla a TODOS los clientes
-            const updatedProducts = await productManager.getProducts();
+            const updatedProducts = await productManager.getAllProducts();
             io.emit('updateProducts', updatedProducts); // Usamos io.emit para enviar a todos
         } catch (error) {
             console.error('Error al crear producto:', error);
@@ -73,10 +104,9 @@ io.on('connection', async (socket) => {
     socket.on('deleteProduct', async (productId) => {
         try {
             await productManager.deleteProduct(productId);
-            
-            // 5. Obtener la lista actualizada y emitirla a TODOS los clientes
-            const updatedProducts = await productManager.getProducts();
-            io.emit('updateProducts', updatedProducts); // Usamos io.emit para enviar a todos
+
+            const updatedProducts = await productManager.getAllProducts();
+            io.emit('updateProducts', updatedProducts);
         } catch (error) {
             console.error('Error al eliminar producto:', error);
             socket.emit('productError', { message: error.message });
@@ -88,7 +118,6 @@ io.on('connection', async (socket) => {
     });
 });
 
-// Usamos 'server.listen' en lugar de 'app.listen' para que socket.io funcione
 server.listen(PORT, () => {
     console.log(`Servidor escuchando en el puerto ${PORT}`);
 });
